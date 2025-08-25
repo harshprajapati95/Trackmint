@@ -1,0 +1,117 @@
+/* TrackMint App Styles */
+
+.auth-container {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.wizard-step {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.step-header {
+  margin-bottom: 2rem;
+}
+
+.step-icon {
+  transition: all 0.3s ease;
+}
+
+.step-icon:hover {
+  transform: scale(1.05);
+}
+
+/* Center content utilities */
+.center-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+.center-card {
+  max-width: 500px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Custom range slider styles */
+input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border);
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Chart container */
+.recharts-wrapper {
+  font-family: inherit;
+}
+
+.recharts-cartesian-axis-tick-value {
+  fill: var(--color-text-secondary);
+  font-size: 12px;
+}
+
+.recharts-legend-wrapper {
+  font-size: 14px;
+}
+
+/* Loading animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .wizard-step {
+    min-height: 50vh;
+  }
+  
+  .step-header {
+    margin-bottom: 1.5rem;
+  }
+  
+  .step-icon {
+    width: 3rem;
+    height: 3rem;
+  }
+  
+  .step-icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
