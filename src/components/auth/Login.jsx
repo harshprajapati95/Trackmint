@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Mail, Lock, LogIn, ArrowRight } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from "../../context/AuthContext";
 
 const Login = ({ onSwitchToSignup }) => {
   const { login, loading, error, clearError } = useAuth();
@@ -47,14 +47,6 @@ const Login = ({ onSwitchToSignup }) => {
             <h2 className="text-2xl font-semibold text-primary mb-2">Welcome back!</h2>
             <p className="text-secondary">Sign in to your account to continue</p>
           </div>
-
-          {/* Demo Credentials Info */}
-          <div className="mb-6 p-4 bg-accent/10 rounded-lg border border-accent/20">
-            <h4 className="font-semibold text-accent mb-2">Demo Credentials</h4>
-            <p className="text-sm text-secondary mb-1">Email: demo@trackmint.com</p>
-            <p className="text-sm text-secondary">Password: password</p>
-          </div>
-
           {/* Error Message */}
           {error && (
             <div className="mb-6 p-4 bg-danger/10 rounded-lg border border-danger/20">
@@ -157,7 +149,6 @@ const Login = ({ onSwitchToSignup }) => {
           </form>
 
           {/* Sign Up Link */}
-          {/* Sign Up Link */}
           <div className="text-center mt-8">
             <p className="text-secondary">
               Don't have an account?{' '}
@@ -177,3 +168,4 @@ const Login = ({ onSwitchToSignup }) => {
 };
 
 export default Login;
+
