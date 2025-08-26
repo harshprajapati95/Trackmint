@@ -28,22 +28,17 @@ const Signup = ({ onSwitchToLogin }) => {
   const onSubmit = async (data) => {
     setIsLoading(true);
     try {
-      const userData = {
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        password: data.password,
-      };
-      
-      await registerUser(userData);
+      // remove validation-only + checkbox fields
+      const { agreeToTerms, marketingConsent, confirmPassword, ...userData } = data;
+
+      await registerUser(userData); // only send what matters
       reset();
     } catch (err) {
-      console.error('Registration error:', err);
+      console.error("Registration error:", err);
     } finally {
       setIsLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-light">
       <div className="w-full max-w-md p-8">
@@ -242,9 +237,8 @@ const Signup = ({ onSwitchToLogin }) => {
             <button
               type="submit"
               disabled={isLoading || loading}
-              className={`btn btn-accent w-full flex items-center justify-center gap-2 ${
-                (isLoading || loading) ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`btn btn-accent w-full flex items-center justify-center gap-2 ${(isLoading || loading) ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
             >
               {isLoading || loading ? (
                 <>
