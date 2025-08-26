@@ -1,19 +1,16 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import Cookies from 'js-cookie';
-import axios from 'axios';
+import React, { createContext, useContext, useReducer } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
-// API base URL - replace with your actual API endpoint
-const API_BASE_URL = 'http://localhost:3001/api';
-
-// Configure axios defaults
-axios.defaults.baseURL = API_BASE_URL;
-axios.defaults.withCredentials = true;
+// Initialize Supabase client
+export const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+);
 
 // Auth context initial state
 const initialState = {
   isAuthenticated: false,
   user: null,
-  token: null,
   loading: true,
   error: null,
 };
@@ -48,7 +45,6 @@ function authReducer(state, action) {
         ...state,
         isAuthenticated: true,
         user: action.payload.user,
-        token: action.payload.token,
         loading: false,
         error: null,
       };
@@ -59,7 +55,6 @@ function authReducer(state, action) {
         ...state,
         isAuthenticated: false,
         user: null,
-        token: null,
         loading: false,
         error: action.payload,
       };
@@ -69,7 +64,6 @@ function authReducer(state, action) {
         ...state,
         isAuthenticated: false,
         user: null,
-        token: null,
         loading: false,
         error: null,
       };
@@ -98,122 +92,101 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  const verifyToken = React.useCallback(async (token) => {
-    try {
-      // Mock token verification
-      if (token === 'mock-token-123') {
-        const mockUser = { id: '1', email: 'demo@trackmint.com', name: 'Demo User' };
-        dispatch({ type: AUTH_ACTIONS.LOGIN_SUCCESS, payload: { user: mockUser, token } });
+  // ✅ Load session on mount + listen for changes
+  React.useEffect(() => {
+    const getSession = async () => {
+      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: true });
+
+      const { data: { session }, error } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        dispatch({
+          type: AUTH_ACTIONS.LOGIN_SUCCESS,
+          payload: { user: session.user },
+        });
+      } else if (error) {
+        dispatch({
+          type: AUTH_ACTIONS.LOGIN_FAILURE,
+          payload: error.message,
+        });
       } else {
-        Cookies.remove('auth_token');
         dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
       }
-    } catch (error) {
-      Cookies.remove('auth_token');
-      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
-    }
+    };
+
+    getSession();
+
+    // ✅ Subscribe to auth state changes (login/logout/refresh)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (session?.user) {
+          dispatch({
+            type: AUTH_ACTIONS.LOGIN_SUCCESS,
+            payload: { user: session.user },
+          });
+        } else {
+          dispatch({ type: AUTH_ACTIONS.LOGOUT });
+        }
+      }
+    );
+
+    // Cleanup listener when component unmounts
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  const logout = React.useCallback(() => {
-    Cookies.remove('auth_token');
-    dispatch({ type: AUTH_ACTIONS.LOGOUT });
-  }, []);
-
+  // ✅ Supabase login
   const login = React.useCallback(async (email, password) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
-    
+
     try {
-      // Mock login with demo credentials
-      if (email === 'demo@trackmint.com' && password === 'password') {
-        const mockUser = { id: '1', email: 'demo@trackmint.com', name: 'Demo User' };
-        const mockToken = 'mock-token-123';
-        
-        Cookies.set('auth_token', mockToken, { expires: 7 });
-        dispatch({ type: AUTH_ACTIONS.LOGIN_SUCCESS, payload: { user: mockUser, token: mockToken } });
-        return { user: mockUser, token: mockToken };
-      } else {
-        throw new Error('Invalid credentials');
-      }
-    } catch (error) {
-      const errorMessage = error.message || 'Login failed';
-      dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE, payload: errorMessage });
-      throw error;
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+
+      dispatch({ type: AUTH_ACTIONS.LOGIN_SUCCESS, payload: { user: data.user } });
+      return data;
+    } catch (err) {
+      dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE, payload: err.message });
+      throw err;
     }
   }, []);
 
+  // ✅ Supabase register
   const register = React.useCallback(async (userData) => {
     dispatch({ type: AUTH_ACTIONS.REGISTER_START });
-    
+
     try {
-      console.log('Sending registration request:', userData);
-      const response = await axios.post('/auth/signup', userData);
-      
-      const { user, token } = response.data;
-      
-      Cookies.set('auth_token', token, { expires: 7 });
-      
-      dispatch({
-        type: AUTH_ACTIONS.REGISTER_SUCCESS,
-        payload: { user, token },
+      const { email, password, ...metadata } = userData;
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata,
+          emailRedirectTo: `${window.location.origin}/welcome`,
+        },
       });
-      
-      console.log('Registration successful:', user);
-      return response.data;
-    } catch (error) {
-      console.error('Registration error:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Registration failed';
-      dispatch({
-        type: AUTH_ACTIONS.REGISTER_FAILURE,
-        payload: errorMessage,
-      });
-      throw error;
+
+      if (error) throw error;
+
+      dispatch({ type: AUTH_ACTIONS.REGISTER_SUCCESS, payload: { user: data.user } });
+      return data;
+    } catch (err) {
+      dispatch({ type: AUTH_ACTIONS.REGISTER_FAILURE, payload: err.message });
+      throw err;
     }
+  }, []);
+
+  // ✅ Supabase logout
+  const logout = React.useCallback(async () => {
+    await supabase.auth.signOut();
+    dispatch({ type: AUTH_ACTIONS.LOGOUT });
   }, []);
 
   const clearError = React.useCallback(() => {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
   }, []);
-
-  // Check for existing token on app load
-  useEffect(() => {
-    const token = Cookies.get('auth_token');
-    if (token) {
-      // Verify token and get user data
-      verifyToken(token);
-    } else {
-      dispatch({ type: AUTH_ACTIONS.SET_LOADING, payload: false });
-    }
-  }, [verifyToken]);
-
-  // Set up axios interceptor for token
-  useEffect(() => {
-    const interceptor = axios.interceptors.request.use(
-      (config) => {
-        if (state.token) {
-          config.headers.Authorization = `Bearer ${state.token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
-
-    return () => axios.interceptors.request.eject(interceptor);
-  }, [state.token]);
-
-  // Set up response interceptor for handling 401s
-  useEffect(() => {
-    const interceptor = axios.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          logout();
-        }
-        return Promise.reject(error);
-      }
-    );
-
-    return () => axios.interceptors.response.eject(interceptor);
-  }, [logout]);
 
   const value = {
     ...state,
@@ -224,11 +197,7 @@ export function AuthProvider({ children }) {
     actions: AUTH_ACTIONS,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 // Custom hook to use auth context
